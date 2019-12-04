@@ -10,6 +10,9 @@ const FILES = [
     './app.bundle.js'
 ]
 
+
+
+
 self.addEventListener('install', function(event){
     event.waitUntil(
         caches.open(CACHE_NAME).then(function(cache){
@@ -18,21 +21,20 @@ self.addEventListener('install', function(event){
     )
 })
 
-self.addEventListener('activate', function(event){
+self.addEventListener('activate', function (event) {
     event.waitUntil(
-        cache.keys().then(function(keys){
-            return Promisse.all(keys
-                .filter(function(key){
-                    return key.indexOf(CACHE_NAME) !== 0
+        caches.keys().then(function (keys) {
+            return Promise.all(keys
+                .filter(function (key) {
+                    return key.indexOf(CACHE_NAME) !== 0;
                 })
-                .map(function(){
+                .map(function (key) {
                     return caches.delete(key);
                 })
-                
-            )
+            );
         })
-    )
-})
+    );
+});
 
 self.addEventListener('fetch', function(event){
     event.respondWith(
@@ -42,16 +44,11 @@ self.addEventListener('fetch', function(event){
     )
 })
 
+
 function sendItems(){
     return DB.findAll('local')
-    .then(items => DB.postAll(items));
+        .then(items => DB.postAll(items));
 }
-
-self.addEventListener('sync', function(event){
-    if(event.tag === 'newItem'){
-        event.waitUntil(sendItems())
-    }
-})
 
 function updateScreens(){
     self.clients.matchAll().then(function(clients){
@@ -61,31 +58,39 @@ function updateScreens(){
     })
 }
 
+self.addEventListener('sync', function(event){
+    if(event.tag === 'newItem' || event.tag === 'test-tag-from-devtools' ){
+        event.waitUntil(sendItems())
+    }
+})
+
+
 self.addEventListener('message', function(event){
     if(event.data === 'updateScreens'){
         updateScreens();
     }
 })
 
+
 self.addEventListener('push', function(event){
     var message = event.data.text();
     self.registration.showNotification('Push message received', {
         body: message,
         icon: './images/tw_icon.png',
-        actions:[
-            {action: 'confirm1', title:'Abrir PWA'},
-            {action: 'confirm2', title:'Abrir TreinaWeb'}
+        actions: [
+            {action: 'confirm1', title: 'Abrir PWA'},
+            {action: 'confirm2', title: 'Abrir TreinaWeb'}
         ]
     })
 })
 
 self.addEventListener('notificationclick', function(event){
     event.notification.close();
-    var url = event.action === 'confirm1'?'http://localhost:3002':'https://treinaweb.com.br';
+    var url = event.action === 'confirm1' ? 'http://localhost:3000' : 'https://treinaweb.com.br';
 
     event.waitUntil(
-        self.client.matchAll().then(function(activeClients){
-            if(activeClients.length>0){
+        self.clients.matchAll().then(function(activeClients){
+            if(activeClients.length > 0){
                 activeClients[0].navigate(url);
             }else{
                 self.clients.openWindow(url);
